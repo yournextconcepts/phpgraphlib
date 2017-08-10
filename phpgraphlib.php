@@ -1248,7 +1248,14 @@ class PHPGraphLib {
 		}
 		//loop through each formatting function
 		foreach ($this->data_format_array as $format_type_callback) {
-			eval('$input=$this->' . $format_type_callback . '($input);');
+			if(isset($this->$format_type_callback)) {
+                                $callback = $this->$format_type_callback;
+                                if(is_callable($callback)) {
+                                    $input = $callback($input);
+                                }
+                        } else {
+                            $this->error[] = "Data format \"$format_type_callback\" not recogized.";
+                        }
 		}
 		return $input;
 	}
@@ -1304,7 +1311,7 @@ class PHPGraphLib {
 	{
 		if (is_numeric($yValue)) {
 			if ($color) {
-				$this->setGenericColor($color, '$this->goal_line_custom_color', "Goal line color not specified properly.");	
+				$this->setGenericColor($color, 'goal_line_custom_color', "Goal line color not specified properly.");	
 				$color = $this->goal_line_custom_color;
 			}
 			$this->goal_line_array[] = array(
@@ -1399,7 +1406,11 @@ class PHPGraphLib {
 	{
 		//can be used for most color setting options
 		if (!empty($inputColor) && ($arr = $this->returnColorArray($inputColor))) {
-			eval($var . ' = imagecolorallocate($this->image, $arr[0], $arr[1], $arr[2]);');
+                        if(isset($this->$var) && is_array($this->$var)) {
+                            $this->{$var}[] = imagecolorallocate($this->image, $arr[0], $arr[1], $arr[2]);;
+                        } else {
+                            $this->$var = imagecolorallocate($this->image, $arr[0], $arr[1], $arr[2]);;
+                        }
 			return true;	
 		}
 		else {
@@ -1410,30 +1421,30 @@ class PHPGraphLib {
 
 	public function setBackgroundColor($color) 
 	{
-		if ($this->setGenericColor($color, '$this->background_color', "Background color not specified properly.")) {
+		if ($this->setGenericColor($color, 'background_color', "Background color not specified properly.")) {
 			$this->bool_background = true;
 		}
 	}
 
 	public function setTitleColor($color)
 	{
-		$this->setGenericColor($color, '$this->title_color', "Title color not specified properly.");
+		$this->setGenericColor($color, 'title_color', "Title color not specified properly.");
 	}
 
 	public function setTextColor($color)
 	{
-		$this->setGenericColor($color, '$this->x_axis_text_color', "X axis text color not specified properly.");
-		$this->setGenericColor($color, '$this->y_axis_text_color', "Y axis Text color not specified properly.");
+		$this->setGenericColor($color, 'x_axis_text_color', "X axis text color not specified properly.");
+		$this->setGenericColor($color, 'y_axis_text_color', "Y axis Text color not specified properly.");
 	}
 
 	public function setXAxisTextColor($color) 
 	{
-		$this->setGenericColor($color, '$this->x_axis_text_color', "X axis text color not specified properly.");
+		$this->setGenericColor($color, 'x_axis_text_color', "X axis text color not specified properly.");
 	}
 
 	public function setYAxisTextColor($color) 
 	{
-		$this->setGenericColor($color, '$this->y_axis_text_color', "Y axis Text color not specified properly.");
+		$this->setGenericColor($color, 'y_axis_text_color', "Y axis Text color not specified properly.");
 	}
 
 	public function setBarColor($color1, $color2 = '', $color3 = '', $color4 = '', $color5 = '')
@@ -1448,22 +1459,22 @@ class PHPGraphLib {
 
 	public function setGridColor($color)
 	{
-		$this->setGenericColor($color, '$this->grid_color', "Grid color not specified properly.");
+		$this->setGenericColor($color, 'grid_color', "Grid color not specified properly.");
 	}
 
 	public function setBarOutlineColor($color)
 	{
-		$this->setGenericColor($color, '$this->outline_color', "Bar outline color not specified properly.");
+		$this->setGenericColor($color, 'outline_color', "Bar outline color not specified properly.");
 	}
 
 	public function setDataPointColor($color)
 	{
-		$this->setGenericColor($color, '$this->data_point_color', "Data point color not specified properly.");
+		$this->setGenericColor($color, 'data_point_color', "Data point color not specified properly.");
 	}
 
 	public function setDataValueColor($color)
 	{
-		$this->setGenericColor($color, '$this->data_value_color', "Data value color not specified properly.");
+		$this->setGenericColor($color, 'data_value_color', "Data value color not specified properly.");
 	}
 
 	public function setLineColor($color1, $color2 = '', $color3 = '', $color4 = '', $color5 = '')
@@ -1471,14 +1482,14 @@ class PHPGraphLib {
 		$line_colors = array($color1, $color2, $color3, $color4, $color5);
 		foreach ($line_colors as $key => $color) {
 			if ($color) {
-				$this->setGenericColor($color, '$this->line_color[]', "Line color " . ($key + 1) . " not specified properly.");
+				$this->setGenericColor($color, 'line_color', "Line color " . ($key + 1) . " not specified properly.");
 			}
 		}
 	}
 
 	/* @deprecated - setGoalLineColor() replaced with 2nd parameter of setGoalLine() */
 	public function setGoalLineColor($color) {
-		$this->setGenericColor($color, '$this->goal_line_color', "Goal line color not specified properly.");
+		$this->setGenericColor($color, 'goal_line_color', "Goal line color not specified properly.");
 	}
 
 	public function setGradient($color1, $color2, $color3 = '', $color4 = '', $color5 = '', $color6 = '', $color7 = '', $color8 = '', $color9 = '', $color10 = '') 
@@ -1527,22 +1538,22 @@ class PHPGraphLib {
 
 	public function setLegendColor($color) 
 	{
-		$this->setGenericColor($color, '$this->legend_color', "Legend color not specified properly.");
+		$this->setGenericColor($color, 'legend_color', "Legend color not specified properly.");
 	}
 
 	public function setLegendTextColor($color) 
 	{
-		$this->setGenericColor($color, '$this->legend_text_color', "Legend text color not specified properly.");
+		$this->setGenericColor($color, 'legend_text_color', "Legend text color not specified properly.");
 	}
 
 	public function setLegendOutlineColor($color) 
 	{
-		$this->setGenericColor($color, '$this->legend_outline_color', "Legend outline color not specified properly.");
+		$this->setGenericColor($color, 'legend_outline_color', "Legend outline color not specified properly.");
 	}
 
 	public function setSwatchOutlineColor($color)
 	{
-		$this->setGenericColor($color, '$this->legend_swatch_outline_color', "Swatch outline color not specified properly.");
+		$this->setGenericColor($color, 'legend_swatch_outline_color', "Swatch outline color not specified properly.");
 	}
 
 	public function setLegendTitle($title1, $title2 = '', $title3 = '', $title4 = '', $title5 = '')
