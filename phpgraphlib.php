@@ -75,6 +75,8 @@ class PHPGraphLib {
 	const LEGEND_PADDING = 4; 
 	const LEGEND_MAX_CHARS = 15;
 
+    const TTF_TEXT_SIZE = 9;
+
 	//display default
 	protected $height = 300;
 	protected $width = 400;
@@ -198,19 +200,45 @@ class PHPGraphLib {
 	protected $legend_swatch_outline_color;
 	protected $legend_titles = array();
 
-	public function __construct($width, $height, $output_file = null) 
+    protected $ttfFile;
+    protected $xAxisTextbox;
+    protected $yAxisTextbox;
+    protected $xAxisText;
+    protected $yAxisText;
+
+    // the minimum interval on grid (vertical axis)
+    public $minHorizGridInterval = 1.0;
+
+    // set PNG headers
+    public $withHeaders = false;
+
+	public function __construct($width, $height, $ttfFile, $output_file = null)
 	{
 		$this->width = $width;
 		$this->height = $height;
 		$this->output_file = $output_file;
 		$this->initialize();
 		$this->allocateColors();
+
+        $this->ttfFile = $ttfFile;
 	}
 
-	protected function initialize() 
+	public function setXAxisText($text)
+    {
+        $this->xAxisText = $text;
+        $this->xAxisTextbox = imagettfbbox(self::TTF_TEXT_SIZE, 0, $this->ttfFile, $this->xAxisText);
+    }
+
+    public function setYAxisText($text)
+    {
+        $this->yAxisText = $text;
+        $this->yAxisTextbox = imagettfbbox(self::TTF_TEXT_SIZE, 90, $this->ttfFile, $this->yAxisText);
+    }
+
+	protected function initialize()
 	{
 		//header must be sent before any html or blank space output
-		if (!$this->output_file) {
+		if (!$this->output_file && $this->withHeaders) {
 			header("Content-type: image/png");
 		}
 
@@ -466,19 +494,22 @@ class PHPGraphLib {
 							} else {
 								//mix of both pos and neg numbers
 								//write value y axis bottom value (will be under bottom of grid even if x axis is floating due to
-								$textVertPos = round($this->y_axis_y1 + (strlen($key) * self::TEXT_WIDTH) + self::AXIS_VALUE_PADDING);
+                                $textVertPos = round($this->y_axis_y1 + (/*strlen($key)*/ 1.5* self::TEXT_WIDTH) + self::AXIS_VALUE_PADDING);
 							}
-							$textHorizPos = round($xStart + ($this->bar_width / 2) - (self::TEXT_HEIGHT / 2));
+                            $textbox = imagettfbbox(self::TTF_TEXT_SIZE, 0, $this->ttfFile, $key);
+                            $textHorizPos = round($xStart + ($this->bar_width / 2) - (abs($textbox[0] - $textbox[2]) / 2));
 					
 							//skip and dispplay every x intervals
 							if ($this->x_axis_value_interval) {
 								if ($key % $this->x_axis_value_interval) {
 								} else {
-									imagestringup($this->image, 2, $textHorizPos, $textVertPos, $key,  $this->x_axis_text_color);
+                                    imagettftext($this->image, self::TTF_TEXT_SIZE, 0, $textHorizPos, $textVertPos, $this->x_axis_text_color, $this->ttfFile, $key);
+                                    //imagestringup($this->image, 2, $textHorizPos, $textVertPos, $key,  $this->x_axis_text_color);
 								}
 							}
 							else {
-								imagestringup($this->image, 2, $textHorizPos, $textVertPos, $key,  $this->x_axis_text_color);
+                                imagettftext($this->image, self::TTF_TEXT_SIZE, 0, $textHorizPos, $textVertPos, $this->x_axis_text_color, $this->ttfFile, $key);
+                                //imagestringup($this->image, 2, $textHorizPos, $textVertPos, $key,  $this->x_axis_text_color);
 							}
 						}
 						else {
@@ -509,6 +540,11 @@ class PHPGraphLib {
 				$xStart += $this->bar_width + $this->space_width;
 			}
 		}
+
+		// draw xAxisText, if applicable
+        if ($this->xAxisText != null && isset($textHorizPos) && isset($textVertPos) && isset($textbox)) {
+            imagettftext($this->image, self::TTF_TEXT_SIZE, 0, $textHorizPos - abs($this->xAxisTextbox[0] - $this->xAxisTextbox[2]) + abs($textbox[0] - $textbox[2]) + ($this->bar_width / 2), $textVertPos + abs($this->xAxisTextbox[3] - $this->xAxisTextbox[5]) + 3, $this->x_axis_text_color, $this->ttfFile, $this->xAxisText);
+        }
 	}
 
 	protected function finalizeColors()
@@ -659,6 +695,11 @@ class PHPGraphLib {
 		//use our function to determine ideal y axis scale interval
 		$intervalFromZero = $this->determineAxisMarkerScale($this->data_max, $this->data_min);
 
+        // check for min Horiz Grid if applicable
+        if ($this->minHorizGridInterval != null && $intervalFromZero < $this->minHorizGridInterval) {
+            $intervalFromZero = $this->minHorizGridInterval;
+        }
+
 		//if we have positive values, add grid values to array 
 		//until we reach the max needed (we will go 1 over)
 		$cur = $min;
@@ -709,7 +750,8 @@ class PHPGraphLib {
 			$this->y_axis_y1 = $this->x_axis_y1 - ($horizGridArray[0] * $this->unit_scale);
 		}
 		//reset with better value based on grid value calculations, not data min
-		$this->y_axis_y2 = $yValue;
+		//$this->y_axis_y2 = $yValue; // we don't want this:
+        //                  make sure the y-Axis y2 is not reset to make sure it is not drawn outside of the figure
 	}
 
 	protected function calculateGridVert()
@@ -751,12 +793,29 @@ class PHPGraphLib {
 		foreach ($this->vert_grid_lines as $line) {
 			imageline($this->image, $line['x1'], $line['y1'], $line['x2'], $line['y2'] , $line['color']);
 		}
-		foreach ($this->horiz_grid_values as $value) {
-			imagestring($this->image, $value['size'], $value['x'], $value['y'], $value['value'], $value['color']);
-		}
+
+        $firstBox = null;
+        foreach ($this->horiz_grid_values as $value) {
+            $textbox = imagettfbbox(self::TTF_TEXT_SIZE, 0, $this->ttfFile, $value['value']);
+            if ($firstBox == null) {
+                $firstBox = $textbox;
+            }
+            imagettftext($this->image, self::TTF_TEXT_SIZE, 0, $this->y_axis_x1 - $textbox[2] - 2, $value['y'] + abs($textbox[3] - $textbox[5]), $value['color'], $this->ttfFile, $value['value']);
+            //imagestring($this->image, $value['size'], $value['x'], $value['y'], $value['value'], $value['color']);
+        }
+
+        // draw a Y Axis explanation if applicable
+        if ($this->yAxisText != null && $firstBox != null) {
+            $yAxisWidth = abs($this->yAxisTextbox[0] - $this->yAxisTextbox[6]);
+            $firstBoxWidth = abs($firstBox[0] - $firstBox[2]);
+            imagettftext($this->image, self::TTF_TEXT_SIZE, 90, $this->y_axis_x1 - $yAxisWidth - $firstBoxWidth - 2, $this->y_axis_y2 + abs($this->yAxisTextbox[1] - $this->yAxisTextbox[3]), $this->x_axis_text_color, $this->ttfFile, $this->yAxisText);
+        }
+
 		//not implemented in the base library, but used in extensions
 		foreach ($this->vert_grid_values as $value) {
-			imagestring($this->image, $value['size'], $value['x'], $value['y'], $value['value'], $value['color']);
+            $textbox = imagettfbbox(self::TTF_TEXT_SIZE, 0, $this->ttfFile, $value['value']);
+            imagettftext($this->image, self::TTF_TEXT_SIZE, 0, $this->y_axis_x1 - $textbox[2] - 2, $value['y'] + abs($textbox[3] - $textbox[5]), $value['color'], $this->ttfFile, $value['value']);
+            //imagestring($this->image, $value['size'], $value['x'], $value['y'], $value['value'], $value['color']);
 		}
 	}
 
@@ -839,15 +898,21 @@ class PHPGraphLib {
 
 	protected function calcCoords() 
 	{
-		//calculate axis points, also used for other calculations
-		$this->x_axis_x1 = $this->y_axis_margin;
-		$this->x_axis_y1 = $this->height - $this->x_axis_margin;
-		$this->x_axis_x2 = $this->width - $this->right_margin;
-		$this->x_axis_y2 = $this->height - $this->x_axis_margin;
-		$this->y_axis_x1 = $this->y_axis_margin;
-		$this->y_axis_y1 = $this->height - $this->x_axis_margin;
-		$this->y_axis_x2 = $this->y_axis_margin;
-		$this->y_axis_y2 = $this->top_margin;
+        //calculate axis points, also used for other calculations
+
+        // make sure to include the labels of the axes
+        $bottomOffset = abs($this->xAxisTextbox[3] - $this->xAxisTextbox[5]);
+        $extraMarginLeft = abs($this->yAxisTextbox[0] - $this->yAxisTextbox[6]);
+
+        $this->x_axis_x1 = $this->y_axis_margin + $extraMarginLeft;
+        $this->x_axis_y1 = $this->height - $this->x_axis_margin - $bottomOffset;
+        $this->x_axis_x2 = $this->width - $this->right_margin + $extraMarginLeft;
+        $this->x_axis_y2 = $this->height - $this->x_axis_margin - $bottomOffset;
+        $this->y_axis_x1 = $this->y_axis_margin + $extraMarginLeft;
+        $this->y_axis_y1 = $this->height - $this->x_axis_margin - $bottomOffset;
+        $this->y_axis_x2 = $this->y_axis_margin + $extraMarginLeft;
+        $this->y_axis_y2 = $this->top_margin - $bottomOffset;
+
 	}
 	
 	protected function determineAxisMarkerScale($max, $min, $axis = 'y') 
