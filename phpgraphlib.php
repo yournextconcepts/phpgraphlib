@@ -214,6 +214,9 @@ class PHPGraphLib {
     // set PNG headers
     public $withHeaders = false;
 
+    // interval scale or categorical (determines axis grids)
+    public $categorical = true;
+
 	public function __construct($width, $height, $ttfFile, $output_file = null)
 	{
 		$this->width = $width;
@@ -1052,7 +1055,7 @@ class PHPGraphLib {
 		$this->lowest_x = $low_x;
 		$this->highest_x = $high_x;
 		$raw_size = $high_x - $low_x +1;
-		if ($raw_size > $this->data_count) {
+		if (!$this->categorical && $raw_size > $this->data_count) {
 			$this->data_count = $raw_size;
 		}
 
@@ -1519,7 +1522,7 @@ class PHPGraphLib {
 		$bar_colors = array($color1, $color2, $color3, $color4, $color5);
 		foreach ($bar_colors as $key => $color) {
 			if ($color) {
-				$this->setGenericColor($color, '$this->multi_bar_colors[]', "Bar color " . ($key + 1) . " not specified properly.");
+				$this->setGenericColor($color, 'multi_bar_colors', "Bar color " . ($key + 1) . " not specified properly.");
 			}
 		}
 	}
