@@ -1,5 +1,7 @@
 <?php
 
+namespace PHPGraphLib;
+
 /*
 
 PHPGraphLib Graphing Library

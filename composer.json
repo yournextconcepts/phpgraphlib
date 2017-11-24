@@ -6,6 +6,9 @@
     "homepage": "http://github.com/elliottb/phpgraphlib",
     "license": "MIT",
     "require": {
-        "php": ">=5.0.0"
+        "php": ">=7.0.0"
+    },
+    "autoload": {
+        "psr-0": {"PHPGraphLib\\": ""}
     }
 }
