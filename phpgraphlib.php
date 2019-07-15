@@ -993,7 +993,7 @@ class PHPGraphLib {
 
 	protected function displayErrors() 
 	{
-		if (count($this->error) > 0) {
+		if (!empty($this->error) && count($this->error) > 0) {
 			$lineHeight = 12;
 			$errorColor = imagecolorallocate($this->image, 0, 0, 0);
 			$errorBackColor = imagecolorallocate($this->image, 255, 204, 0);
